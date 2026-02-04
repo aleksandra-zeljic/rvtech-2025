@@ -50,6 +50,12 @@ npm run deploy-frontend-fixed-bucket
 - API primer:
   `http://localhost:4566/restapis/{API_ID}/dev/_user_request_/chargers/Belgrade`
 
+## Brzi testovi
+- Sync OCM:
+  `http://localhost:4566/restapis/{API_ID}/dev/_user_request_/sync`
+- Pretraga po gradu:
+  `http://localhost:4566/restapis/{API_ID}/dev/_user_request_/chargers/Novi%20Sad`
+
 ## Napomene
 - `API_ID` se menja nakon `docker-compose down -v`, pa je potrebno ponovo ažurirati frontend.
 - CORS je podešen na LocalStack S3 website domen.
