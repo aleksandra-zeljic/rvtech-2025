@@ -5,6 +5,12 @@ const OCM_API_KEY = process.env.OCM_API_KEY;
 const OCM_URL = process.env.OCM_URL;
 const TABLE_NAME = process.env.CHARGERS_TABLE;
 const BATCH_SIZE = 25;  // DynamoDB BatchWriteItem limit (maks 25 stavki po batch-u)
+const ALLOWED_ORIGIN = 'http://punjaci-website.s3-website.localstack.cloud:4566';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+};
 
 // Konfiguracija DynamoDB klijenta za LocalStack
 // LOCALSTACK_HOSTNAME se automatski postavlja kada Lambda radi unutar LocalStack kontejnera
@@ -23,10 +29,27 @@ const client = new DynamoDBClient({
 // (nije potrebna { S: "value" } sintaksa)
 const docClient = DynamoDBDocumentClient.from(client);
 
-exports.handler = async () => {
+const buildResponse = (statusCode, body) => ({
+  statusCode,
+  headers: corsHeaders,
+  body: JSON.stringify(body),
+});
+
+exports.handler = async (event = {}) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return buildResponse(200, { ok: true });
+  }
+
   console.log("Fetching OCM chargers...");
 
   try {
+    if (!OCM_API_KEY) {
+      return buildResponse(500, { error: 'OCM_API_KEY nije postavljen' });
+    }
+    if (!TABLE_NAME) {
+      return buildResponse(500, { error: 'CHARGERS_TABLE nije postavljen' });
+    }
+
     // Preuzmi podatke sa OCM API-ja
     const MAX_RESULTS = 1000; // za Srbiju ima oko 110 punjača na OCM API-ju
     const params = new URLSearchParams({
@@ -38,6 +61,9 @@ exports.handler = async () => {
     });
 
     const response = await fetch(`${OCM_URL}?${params}`);
+    if (!response.ok) {
+      throw new Error(`OCM API error: ${response.status} ${response.statusText}`);
+    }
     const chargers = await response.json();
 
     const fetchedAll = chargers.length < MAX_RESULTS;
@@ -142,22 +168,14 @@ exports.handler = async () => {
     }
     // ------------------------------------------------------------
 
-    return {
-      statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': 'http://punjaci-website.s3-website.localhost.localstack.cloud:4566' },
-      body: JSON.stringify({
-        message: "OCM data synced to DynamoDB",
-        count: items.length,
-        deleted: deletedCount,
-        fetchedAll: fetchedAll,
-      }),
-    };
+    return buildResponse(200, {
+      message: "OCM data synced to DynamoDB",
+      count: items.length,
+      deleted: deletedCount,
+      fetchedAll: fetchedAll,
+    });
   } catch (error) {
     console.error("Error syncing OCM data:", error);
-    return {
-      statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': 'http://punjaci-website.s3-website.localhost.localstack.cloud:4566' },
-      body: JSON.stringify({ error: error.message }),
-    };
+    return buildResponse(500, { error: error.message });
   }
 };
