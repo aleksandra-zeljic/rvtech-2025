@@ -14,6 +14,12 @@ Ovo je početni kostur projekta koji kombinuje kod iz prethodnih foldera:
 
 ## Pokretanje (lokalno)
 
+### 0) Podesi env varijable
+Kopiraj primer fajl i upiši svoj OCM API ključ:
+```bash
+cp config/env.example .env
+```
+
 ### 1) Pokreni LocalStack
 ```bash
 docker-compose up -d
