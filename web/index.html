@@ -137,10 +137,12 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-      // KONFIGURACIJA - promeni API_ID ako treba
+      // KONFIGURACIJA - upiši API_ID posle deploy-a
       // Dobij sa: awslocal apigateway get-rest-apis --query 'items[0].id' --output text
       const API_ID = '';
-      const API_BASE_URL = `http://localhost:4566/restapis/${API_ID}/dev/_user_request_`;
+      const API_BASE_URL = API_ID
+        ? `http://localhost:4566/restapis/${API_ID}/dev/_user_request_`
+        : '';
       
       // Inicijalizuj mapu (centrirana na Srbiju)
       const map = L.map('map').setView([44.0165, 21.0059], 7);
@@ -208,6 +210,11 @@
         const status = document.getElementById('status');
         const searchBtn = document.getElementById('searchBtn');
 
+        if (!API_BASE_URL) {
+          status.textContent = 'Nedostaje API_ID u konfiguraciji.';
+          return;
+        }
+
         searchBtn.disabled = true;
         searchBtn.textContent = 'Učitavanje...';
         status.textContent = 'Pretraga...';
@@ -235,6 +242,11 @@
       async function syncOCM() {
         const status = document.getElementById('status');
         const syncBtn = document.getElementById('syncBtn');
+
+        if (!API_BASE_URL) {
+          status.textContent = 'Nedostaje API_ID u konfiguraciji.';
+          return;
+        }
 
         syncBtn.disabled = true;
         syncBtn.textContent = 'Sinhronizacija...';
@@ -273,8 +285,12 @@
 
       document.getElementById('syncBtn').addEventListener('click', syncOCM);
 
-      // Automatski učitaj Belgrade punjače na startu
-      // searchChargers('Belgrade');
+      // Automatski učitaj Belgrade punjače na startu (ako je API_ID podešen)
+      if (API_BASE_URL) {
+        searchChargers('Belgrade');
+      } else {
+        document.getElementById('status').textContent = 'Unesi API_ID pa osveži stranicu.';
+      }
     </script>
   </body>
 </html>
