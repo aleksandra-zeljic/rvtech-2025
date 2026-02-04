@@ -22,18 +22,28 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 
-exports.handler = async (event) => {
+const buildResponse = (statusCode, body) => ({
+  statusCode,
+  headers: corsHeaders,
+  body: JSON.stringify(body),
+});
+
+exports.handler = async (event = {}) => {
   console.log('Event:', JSON.stringify(event, null, 2));
+
+  if (event.httpMethod === 'OPTIONS') {
+    return buildResponse(200, { ok: true });
+  }
+
+  if (!TABLE_NAME) {
+    return buildResponse(500, { error: 'CHARGERS_TABLE nije postavljen' });
+  }
 
   // Preuzmi town iz path parametra
   const town = event.pathParameters?.town;
   
   if (!town) {
-    return {
-      statusCode: 400,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Town parametar je obavezan' }),
-    };
+    return buildResponse(400, { error: 'Town parametar je obavezan' });
   }
 
   try {
@@ -51,21 +61,13 @@ exports.handler = async (event) => {
 
     console.log(`Pronađeno ${result.Items?.length || 0} punjača za grad: ${town}`);
 
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: JSON.stringify({
-        town: decodeURIComponent(town),
-        count: result.Items?.length || 0,
-        chargers: result.Items || [],
-      }),
-    };
+    return buildResponse(200, {
+      town: decodeURIComponent(town),
+      count: result.Items?.length || 0,
+      chargers: result.Items || [],
+    });
   } catch (error) {
     console.error('Greška pri query-ju DynamoDB:', error);
-    return {
-      statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: error.message }),
-    };
+    return buildResponse(500, { error: error.message });
   }
 };
